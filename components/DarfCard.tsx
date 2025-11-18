@@ -194,12 +194,12 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                           disabled={result.items.length === 0}
                        />
                     </th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider">Código</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-medium text-slate-500 uppercase tracking-wider w-full">Descrição</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">Principal</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">Multa</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-slate-500 uppercase tracking-wider whitespace-nowrap">Juros</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-medium text-slate-900 uppercase tracking-wider whitespace-nowrap">Total</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Código</th>
+                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-full">Descrição</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Principal</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Multa</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Juros</th>
+                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-slate-900 uppercase tracking-wider whitespace-nowrap">Total</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-200">
@@ -220,19 +220,19 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                             onChange={() => toggleSelection(idx)}
                           />
                         </td>
-                        {/* Fonte reduzida para text-xs */}
-                        <td className="px-4 py-2 whitespace-nowrap text-xs font-bold text-slate-800">{item.code}</td>
+                        {/* Código com text-sm */}
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-slate-800">{item.code}</td>
                         
-                        {/* Ajuste da descrição: text-[11px], whitespace-pre-line para aceitar quebra de linha vinda da IA */}
-                        <td className="px-4 py-2 text-[11px] leading-tight text-slate-600 max-w-2xl whitespace-pre-line">
+                        {/* Descrição com text-xs (12px), antes era text-[11px] */}
+                        <td className="px-4 py-2 text-xs leading-tight text-slate-600 max-w-2xl whitespace-pre-line">
                              {item.description || '-'}
                         </td>
 
-                        {/* Fonte reduzida para text-xs nas colunas de valor */}
-                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600 text-right font-mono">{formatCurrency(item.principal)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600 text-right font-mono">{formatCurrency(item.multa)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600 text-right font-mono">{formatCurrency(item.juros)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-900 text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
+                        {/* Valores com text-sm */}
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.principal)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.multa)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.juros)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900 text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
                       </tr>
                     ))
                   )}
