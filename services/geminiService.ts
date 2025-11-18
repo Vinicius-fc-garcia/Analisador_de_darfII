@@ -43,13 +43,12 @@ export const analyzeDarfDocument = async (file: File): Promise<DarfResult> => {
     
     Para cada linha na composição, procure por:
     - Um CÓDIGO numérico no início (ex: 1082, 1138, etc.).
-    - A DESCRIÇÃO textual que aparece logo após o código (ex: "IRRF - REND DO TRABALHO").
+    - A DESCRIÇÃO: É fundamental capturar a Denominação Principal (que está na mesma linha do código) E TAMBÉM o texto da linha imediatamente abaixo (que contém detalhes como '01 CP SEGURADOS...' ou '01 CP PATRONAL...'). Combine as duas linhas em um único texto, separando-as por uma quebra de linha.
     - Os valores de Principal, Multa, Juros e Total (desta linha específica).
     
     Regras de Extração:
     - Ignore linhas que não começam com um código de receita numérico.
     - Se houver apenas uma linha principal de arrecadação sem tabela detalhada, extraia essa linha única.
-    - A descrição deve ser curta e clara.
     - Converta todos os valores monetários para o formato numérico (float/number), substituindo vírgula decimal por ponto e removendo separadores de milhar. Exemplo: "1.200,50" vira 1200.50.
   `;
 
@@ -77,7 +76,7 @@ export const analyzeDarfDocument = async (file: File): Promise<DarfResult> => {
               type: Type.OBJECT,
               properties: {
                 code: { type: Type.STRING, description: "O código da receita (ex: 1082)." },
-                description: { type: Type.STRING, description: "Descrição ou nome do tributo ao lado do código." },
+                description: { type: Type.STRING, description: "Descrição completa: Denominação principal + Detalhe da linha abaixo." },
                 principal: { type: Type.NUMBER, description: "Valor do principal." },
                 multa: { type: Type.NUMBER, description: "Valor da multa." },
                 juros: { type: Type.NUMBER, description: "Valor dos juros." },
