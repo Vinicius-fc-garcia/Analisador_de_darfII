@@ -1,0 +1,55 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>DARF Intelligent Analyzer</title>
+    <meta name="description" content="Analisador inteligente de DARFs usando IA" />
+    <!-- Critical CSS: Garante que ícones e imagens nunca fiquem gigantes antes do CSS carregar -->
+    <style>
+      img, svg { 
+        display: block; 
+        max-width: 100%; 
+        height: auto; 
+      }
+      body { margin: 0; font-family: system-ui, -apple-system, sans-serif; }
+    </style>
+<script type="importmap">
+{
+  "imports": {
+    "react/": "https://aistudiocdn.com/react@^19.2.0/",
+    "react": "https://aistudiocdn.com/react@^19.2.0",
+    "react-dom/": "https://aistudiocdn.com/react-dom@^19.2.0/",
+    "@google/genai": "https://aistudiocdn.com/@google/genai@^1.30.0",
+    "vite": "https://aistudiocdn.com/vite@^7.2.2",
+    "@vitejs/plugin-react": "https://aistudiocdn.com/@vitejs/plugin-react@^5.1.1"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-slate-50 text-slate-900 antialiased">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+    <!-- Fallback para Preview: Se o CSS compilado falhar, injeta CDN do Tailwind para debug visual -->
+    <script>
+      window.addEventListener('load', function() {
+        // Cria um elemento teste que deveria estar escondido pelo Tailwind
+        var test = document.createElement('div');
+        test.className = 'hidden';
+        document.body.appendChild(test);
+        var display = window.getComputedStyle(test).display;
+        document.body.removeChild(test);
+        
+        // Se não estiver escondido, o Tailwind não carregou. Carrega CDN.
+        if (display !== 'none') {
+          console.log('CSS build not detected. Loading Tailwind CDN for preview...');
+          var script = document.createElement('script');
+          script.src = 'https://cdn.tailwindcss.com';
+          document.head.appendChild(script);
+        }
+      });
+    </script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

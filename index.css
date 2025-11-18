@@ -1,0 +1,12 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Safety net: garante que SVGs e imagens não explodam se o Tailwind falhar ou demorar */
+@layer base {
+  img, svg {
+    display: block;
+    max-width: 100%;
+    height: auto;
+  }
+}

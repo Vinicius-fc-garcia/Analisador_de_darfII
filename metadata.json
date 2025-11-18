@@ -1,0 +1,5 @@
+{
+  "name": "DARF Intelligent Analyzer",
+  "description": "A React application powered by Gemini 2.5 Flash to automatically extract, parse, and validate Brazilian DARF tax documents using AI-driven OCR.",
+  "requestFramePermissions": []
+}
