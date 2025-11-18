@@ -21,10 +21,11 @@ jobs:
         uses: actions/setup-node@v4
         with:
           node-version: 20
-          cache: 'npm'
+          # Cache removido temporariamente pois exige package-lock.json
 
       - name: Install dependencies
-        run: npm ci
+        # Usamos 'npm install' em vez de 'npm ci' porque o package-lock.json pode não ter sido subido
+        run: npm install
 
       - name: Build
         run: npm run build
