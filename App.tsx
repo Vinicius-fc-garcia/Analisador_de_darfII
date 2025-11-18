@@ -120,19 +120,6 @@ const App: React.FC = () => {
           </div>
         )}
 
-        {/* Future Phase Placeholder */}
-        <div className="mt-12 pt-8 border-t border-slate-200 opacity-40 hover:opacity-100 transition-opacity duration-500">
-           <h4 className="text-xs font-semibold text-slate-400 uppercase tracking-wider mb-2">Próxima Fase: Ações em Lote</h4>
-           <div className="flex gap-2">
-              <button disabled className="px-4 py-2 bg-slate-200 text-slate-400 rounded-md text-sm cursor-not-allowed">
-                 Somatório Personalizado
-              </button>
-              <button disabled className="px-4 py-2 bg-slate-200 text-slate-400 rounded-md text-sm cursor-not-allowed">
-                 Copiar para Área de Transferência
-              </button>
-           </div>
-        </div>
-
       </main>
     </div>
   );
