@@ -1,3 +1,4 @@
+
 import React, { useState, useMemo } from 'react';
 import { DarfDocument, ProcessingStatus } from '../types';
 
@@ -197,7 +198,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                     <th scope="col" className="px-4 py-3 w-10 text-center">
                        <input 
                           type="checkbox" 
-                          className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                          className="w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                           checked={result.items.length > 0 && selectedIndices.size === result.items.length}
                           onChange={toggleAll}
                           disabled={result.items.length === 0}
@@ -224,7 +225,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                         <td className="px-4 py-2 text-center">
                           <input 
                             type="checkbox" 
-                            className="rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
+                            className="w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
                             checked={selectedIndices.has(idx)}
                             onChange={() => toggleSelection(idx)}
                           />
