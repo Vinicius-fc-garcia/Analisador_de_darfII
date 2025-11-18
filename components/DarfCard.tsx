@@ -223,11 +223,9 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                         {/* Fonte reduzida para text-xs */}
                         <td className="px-4 py-2 whitespace-nowrap text-xs font-bold text-slate-800">{item.code}</td>
                         
-                        {/* Ajuste da descrição: quebra de linha + max 2 linhas + fonte menor */}
-                        <td className="px-4 py-2 text-xs text-slate-500 max-w-2xl whitespace-normal break-words">
-                           <span className="line-clamp-2 leading-tight" title={item.description}>
+                        {/* Ajuste da descrição: text-[11px], whitespace-pre-line para aceitar quebra de linha vinda da IA */}
+                        <td className="px-4 py-2 text-[11px] leading-tight text-slate-600 max-w-2xl whitespace-pre-line">
                              {item.description || '-'}
-                           </span>
                         </td>
 
                         {/* Fonte reduzida para text-xs nas colunas de valor */}
