@@ -32,24 +32,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
 
   // Selection Logic
   const toggleSelection = (index: number) => {
-    if (!result) return;
-
-    const targetCode = result.items[index].code;
-    // Determine if we are selecting or deselecting based on the clicked item's current state
-    const shouldSelect = !selectedIndices.has(index);
-
     const newSet = new Set(selectedIndices);
-
-    result.items.forEach((item, idx) => {
-      // Toggle all items that match the target code
-      if (item.code === targetCode) {
-        if (shouldSelect) {
-          newSet.add(idx);
-        } else {
-          newSet.delete(idx);
-        }
-      }
-    });
+    
+    // Lógica simplificada: Seleciona apenas a linha clicada, não agrupa mais por código.
+    if (newSet.has(index)) {
+      newSet.delete(index);
+    } else {
+      newSet.add(index);
+    }
 
     setSelectedIndices(newSet);
   };
@@ -230,14 +220,21 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                             onChange={() => toggleSelection(idx)}
                           />
                         </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-slate-800">{item.code}</td>
-                        <td className="px-4 py-2 text-sm text-slate-500 max-w-2xl truncate" title={item.description}>
-                          {item.description || '-'}
+                        {/* Fonte reduzida para text-xs */}
+                        <td className="px-4 py-2 whitespace-nowrap text-xs font-bold text-slate-800">{item.code}</td>
+                        
+                        {/* Ajuste da descrição: quebra de linha + max 2 linhas + fonte menor */}
+                        <td className="px-4 py-2 text-xs text-slate-500 max-w-2xl whitespace-normal break-words">
+                           <span className="line-clamp-2 leading-tight" title={item.description}>
+                             {item.description || '-'}
+                           </span>
                         </td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.principal)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.multa)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.juros)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900 text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
+
+                        {/* Fonte reduzida para text-xs nas colunas de valor */}
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600 text-right font-mono">{formatCurrency(item.principal)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600 text-right font-mono">{formatCurrency(item.multa)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-600 text-right font-mono">{formatCurrency(item.juros)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-xs text-slate-900 text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
                       </tr>
                     ))
                   )}
