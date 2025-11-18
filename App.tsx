@@ -6,7 +6,6 @@ import { analyzeDarfDocument } from './services/geminiService';
 
 const App: React.FC = () => {
   const [darfs, setDarfs] = useState<DarfDocument[]>([]);
-  const [globalProcessing, setGlobalProcessing] = useState(false);
 
   const processDocument = async (id: string, file: File) => {
     try {
