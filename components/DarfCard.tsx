@@ -39,7 +39,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
 
   // Categorização dos Itens
   const categorizedData = useMemo(() => {
-    if (!result) return { funcionarios: 0, individuais: 0, itemsFunc: [], itemsIndiv: [], itemsRet: [] };
+    // Fix: Return exact same shape as the calculation block below to avoid TS18048
+    if (!result) return { 
+      baseFuncionarios: 0, 
+      baseIndividuais: 0, 
+      itemsFuncIndices: new Set<number>(), 
+      itemsIndivIndices: new Set<number>(), 
+      itemsRetIndices: new Set<number>() 
+    };
 
     let sumFunc = 0;
     let sumIndiv = 0;
@@ -126,13 +133,9 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
         return;
       }
     } else {
-      // Usuário disse que NÃO tem IR. Se houver valor digitado, avisar ou limpar?
-      // Pela lógica de segurança, vamos zerar o input visualmente se ele disse que não tem, 
-      // ou apenas prosseguir assumindo que o cálculo atual (seja com 0 ou não) é o desejado.
-      // Vamos assumir que se ele disse "Não", ele quer copiar sem considerar IR, mas a lógica matemática
-      // depende do input. Vamos apenas copiar.
+      // Usuário disse que NÃO tem IR. Se houver valor digitado, assumimos que ele quer ignorar.
       if (irValueNumber > 0) {
-         // Opcional: Alertar que existe valor digitado mas ele clicou em Não
+         // Opcional: logica extra aqui
       }
     }
 
