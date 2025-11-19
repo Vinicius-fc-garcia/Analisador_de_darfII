@@ -26,6 +26,9 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   const [irInputValue, setIrInputValue] = useState<string>('');
   const [copyStage, setCopyStage] = useState<CopyStage>('idle');
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
+  
+  // State para feedback visual da cópia linha a linha
+  const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
 
   const isSuccess = status === ProcessingStatus.SUCCESS;
   const isError = status === ProcessingStatus.ERROR;
@@ -39,7 +42,6 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
 
   // Categorização dos Itens
   const categorizedData = useMemo(() => {
-    // Fix: Return exact same shape as the calculation block below to avoid TS18048
     if (!result) return { 
       baseFuncionarios: 0, 
       baseIndividuais: 0, 
@@ -60,8 +62,6 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
 
       if (RETENTION_CODES.includes(code)) {
         // É código de retenção de nota fiscal (5952, 0561, 1062)
-        // Pela regra: deduzir do cálculo de funcionários, e exceção no cálculo de individuais.
-        // Ou seja, não entra na soma positiva de ninguém.
         itemsRetIndices.add(idx);
       } else if (desc.includes('individ')) {
         // É Contribuinte Individual
@@ -86,7 +86,6 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   // Valor numérico do Input de IR
   const irValueNumber = useMemo(() => {
     if (!irInputValue) return 0;
-    // Converte string "1.200,50" para number 1200.50
     const cleanStr = irInputValue.replace(/\./g, '').replace(',', '.');
     const num = parseFloat(cleanStr);
     return isNaN(num) ? 0 : num;
@@ -95,11 +94,8 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   // Cálculo Final baseado no Modo
   const finalValue = useMemo(() => {
     if (calcMode === 'funcionarios') {
-      // Total Guia (sem retenções e individuais) - IR Digitado
-      // A baseFuncionarios já exclui retenções e individuais pela lógica do useMemo acima
       return Math.max(0, categorizedData.baseFuncionarios - irValueNumber);
     } else {
-      // Soma Individuais + IR Digitado
       return categorizedData.baseIndividuais + irValueNumber;
     }
   }, [calcMode, categorizedData, irValueNumber]);
@@ -107,16 +103,12 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   // Formatação do Input de Moeda
   const handleIrChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     let value = e.target.value;
-    // Remove tudo que não é número
     value = value.replace(/\D/g, '');
-    
-    // Formatação visual enquanto digita (ex: 100 -> 1,00)
     if (value) {
       value = (parseInt(value) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-    
     setIrInputValue(value);
-    setCopyStage('idle'); // Reseta estado de cópia se mudar valor
+    setCopyStage('idle');
   };
 
   const initiateCopy = () => {
@@ -128,18 +120,10 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     if (hasIr) {
       if (irValueNumber <= 0) {
         setFeedbackMessage('Digite o valor do IR antes de copiar.');
-        // Foca no input
         document.getElementById(`ir-input-${darfDoc.id}`)?.focus();
         return;
       }
-    } else {
-      // Usuário disse que NÃO tem IR. Se houver valor digitado, assumimos que ele quer ignorar.
-      if (irValueNumber > 0) {
-         // Opcional: logica extra aqui
-      }
     }
-
-    // Executa Cópia
     const textToCopy = finalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     try {
       await navigator.clipboard.writeText(textToCopy);
@@ -150,7 +134,18 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     }
   };
 
-  // Helper para verificar se a linha deve ser destacada
+  // Função para copiar valor de linha específica (Apenas Retenção)
+  const handleCopyRowValue = async (value: number, idx: number) => {
+    const textToCopy = value.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setCopiedRowIndex(idx);
+      setTimeout(() => setCopiedRowIndex(null), 2000);
+    } catch (err) {
+      console.error('Failed to copy row', err);
+    }
+  };
+
   const getRowStyle = (idx: number) => {
     const isFuncRow = categorizedData.itemsFuncIndices.has(idx);
     const isIndivRow = categorizedData.itemsIndivIndices.has(idx);
@@ -158,12 +153,12 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
 
     if (calcMode === 'funcionarios') {
       if (isFuncRow) return 'bg-blue-50 text-blue-900 font-medium';
-      if (isRetRow) return 'opacity-50 bg-red-50 text-red-800 decoration-line-through'; // Excluído
-      if (isIndivRow) return 'opacity-40'; // Irrelevante
+      if (isRetRow) return 'opacity-70 bg-red-50 text-red-800'; 
+      if (isIndivRow) return 'opacity-40'; 
     } else {
       if (isIndivRow) return 'bg-green-50 text-green-900 font-medium';
-      if (isRetRow) return 'opacity-40'; // Irrelevante
-      if (isFuncRow) return 'opacity-40'; // Irrelevante
+      if (isRetRow) return 'opacity-70 bg-red-50 text-red-800';
+      if (isFuncRow) return 'opacity-40'; 
     }
     return 'text-slate-600';
   };
@@ -342,6 +337,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
+                    <th scope="col" className="px-2 py-3 w-10"></th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Código</th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-full">Descrição</th>
                     <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Principal</th>
@@ -353,33 +349,55 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                 <tbody className="bg-white divide-y divide-slate-200">
                   {result.items.length === 0 ? (
                     <tr>
-                      <td colSpan={6} className="px-4 py-4 text-center text-sm text-slate-500">
+                      <td colSpan={7} className="px-4 py-4 text-center text-sm text-slate-500">
                         Nenhum código numérico identificado na composição.
                       </td>
                     </tr>
                   ) : (
-                    result.items.map((item, idx) => (
-                      <tr key={`${item.code}-${idx}`} className={`transition-colors duration-200 ${getRowStyle(idx)}`}>
-                        {/* Código com text-sm */}
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-inherit">{item.code}</td>
-                        
-                        {/* Descrição com text-xs (12px) */}
-                        <td className="px-4 py-2 text-xs leading-tight text-inherit max-w-2xl whitespace-pre-line">
-                             {item.description || '-'}
-                        </td>
+                    result.items.map((item, idx) => {
+                      const cleanCode = item.code.replace(/[^\d]/g, '');
+                      const isRetention = RETENTION_CODES.includes(cleanCode);
+                      
+                      return (
+                        <tr key={`${item.code}-${idx}`} className={`transition-colors duration-200 ${getRowStyle(idx)}`}>
+                          {/* Botão de Copiar (Apenas para Códigos de Retenção) */}
+                          <td className="px-2 py-2 text-center">
+                            {isRetention && (
+                              <button
+                                onClick={() => handleCopyRowValue(item.total, idx)}
+                                title="Copiar valor desta linha"
+                                className="p-1.5 rounded-md hover:bg-blue-100 text-slate-400 hover:text-blue-600 transition-colors focus:outline-none focus:ring-2 focus:ring-blue-400"
+                              >
+                                {copiedRowIndex === idx ? (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4 text-green-600">
+                                    <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                  </svg>
+                                ) : (
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                                    <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                                    <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                                  </svg>
+                                )}
+                              </button>
+                            )}
+                          </td>
 
-                        {/* Valores com text-sm */}
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.principal)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.multa)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.juros)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
-                      </tr>
-                    ))
+                          <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-inherit">{item.code}</td>
+                          <td className="px-4 py-2 text-xs leading-tight text-inherit max-w-2xl whitespace-pre-line">
+                              {item.description || '-'}
+                          </td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.principal)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.multa)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.juros)}</td>
+                          <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
+                        </tr>
+                      );
+                    })
                   )}
                 </tbody>
                 <tfoot className="bg-slate-100">
                     <tr>
-                      <td colSpan={5} className="px-4 py-2 text-xs font-bold text-slate-700 uppercase text-right">Soma Geral Guia</td>
+                      <td colSpan={6} className="px-4 py-2 text-xs font-bold text-slate-700 uppercase text-right">Soma Geral Guia</td>
                       <td className="px-4 py-2 text-sm font-bold text-slate-900 text-right font-mono">
                         {formatCurrency(calculatedTotal || 0)}
                       </td>
