@@ -43,63 +43,65 @@ const FileUploader: React.FC<FileUploadProps> = ({ onFilesSelected, disabled }) 
   const containerStyle: React.CSSProperties = {
     borderWidth: '2px',
     borderStyle: 'dashed',
-    borderColor: isDragging ? '#3b82f6' : '#e2e8f0', // blue-500 : slate-200
-    backgroundColor: isDragging ? '#eff6ff' : '#ffffff', // blue-50 : white
-    borderRadius: '1rem',
+    borderColor: isDragging ? '#2563eb' : '#d1d5db', // blue-600 : gray-300
+    backgroundColor: isDragging ? '#eff6ff' : '#f9fafb', // blue-50 : gray-50
+    borderRadius: '0.5rem',
+    padding: '3rem',
+    textAlign: 'center',
     width: '100%',
     position: 'relative',
-    transition: 'all 0.3s ease',
+    transition: 'all 0.2s ease',
     cursor: disabled ? 'not-allowed' : 'pointer',
     opacity: disabled ? 0.6 : 1
   };
 
   return (
-    <div className="w-full bg-white rounded-2xl overflow-hidden">
-      {/* Topo decorativo */}
-      <div className="h-1.5 bg-gradient-to-r from-blue-500 to-indigo-600 w-full"></div>
+    <div
+      className="group"
+      style={containerStyle}
+      onDragOver={handleDragOver}
+      onDragLeave={handleDragLeave}
+      onDrop={handleDrop}
+    >
+      <input
+        type="file"
+        multiple
+        accept=".pdf,image/*"
+        onChange={handleFileInput}
+        disabled={disabled}
+        className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer disabled:cursor-not-allowed"
+      />
       
-      <div className="p-8 md:p-12">
-        <div
-          className={`
-            relative w-full py-16 px-4 rounded-xl transition-all duration-300 ease-out group
-            ${isDragging ? 'scale-[1.01] shadow-lg' : ''}
-          `}
-          style={containerStyle}
-          onDragOver={handleDragOver}
-          onDragLeave={handleDragLeave}
-          onDrop={handleDrop}
+      <div className="pointer-events-none">
+        <svg 
+          className={`mx-auto h-12 w-12 mb-4 ${isDragging ? 'text-blue-600' : 'text-gray-400'}`}
+          stroke="currentColor" 
+          fill="none" 
+          viewBox="0 0 48 48" 
+          aria-hidden="true"
         >
-          <input
-            type="file"
-            multiple
-            accept=".pdf,image/*"
-            onChange={handleFileInput}
-            disabled={disabled}
-            className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer disabled:cursor-not-allowed"
+          <path 
+            strokeLinecap="round" 
+            strokeLinejoin="round" 
+            strokeWidth={2} 
+            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" 
           />
-          
-          <div className="flex flex-col items-center justify-center text-center pointer-events-none">
-            <div className={`
-                mb-6 p-4 rounded-full transition-colors duration-300
-                ${isDragging ? 'bg-blue-100 text-blue-600' : 'bg-slate-50 text-slate-400 group-hover:bg-blue-50 group-hover:text-blue-500'}
-              `}>
-              <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor">
-                <path strokeLinecap="round" strokeLinejoin="round" d="M12 16.5V9.75m0 0l3 3m-3-3l-3 3M6.75 19.5a4.5 4.5 0 01-1.41-8.775 5.25 5.25 0 0110.233-2.33 3 3 0 013.758 3.848A3.752 3.752 0 0118 19.5H6.75z" />
-              </svg>
-            </div>
-            
-            <h3 className="text-xl font-bold text-slate-800 mb-3 group-hover:text-blue-700 transition-colors">
-              Upload de Documentos
-            </h3>
-            <p className="text-slate-500 max-w-sm mx-auto mb-8 font-medium text-sm">
-              Arraste e solte arquivos DARF (PDF ou Imagem) ou clique para buscar no computador.
-            </p>
-
-            <span className="px-6 py-2.5 bg-blue-600 text-white rounded-lg text-sm font-bold shadow-lg shadow-blue-500/30 group-hover:bg-blue-700 transition-all transform group-hover:-translate-y-0.5">
-              Selecionar Arquivos
+        </svg>
+        
+        <div className="flex text-sm text-gray-600 justify-center">
+          <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
+            <span className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 shadow-sm">
+              Escolher Ficheiros
             </span>
-          </div>
+          </span>
+          <p className="pl-2 self-center">Nenhum ficheiro selecionado</p>
         </div>
+        <p className="text-xs text-gray-500 mt-2">
+          Arraste DARFs ou clique para selecionar
+        </p>
+        <p className="text-xs text-gray-400 mt-1">
+          Suporta múltiplos arquivos (PDF, JPG, PNG)
+        </p>
       </div>
     </div>
   );
