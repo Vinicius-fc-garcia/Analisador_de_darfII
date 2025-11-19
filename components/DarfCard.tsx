@@ -1,10 +1,13 @@
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { DarfDocument, ProcessingStatus } from '../types';
 
 interface DarfCardProps {
   document: DarfDocument;
 }
+
+type CalculationMode = 'funcionarios' | 'individuais';
+type CopyStage = 'idle' | 'verifying' | 'copied';
 
 const formatCurrency = (value: number) => {
   return new Intl.NumberFormat('pt-BR', {
@@ -13,10 +16,16 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
-  const { fileName, status, result, calculatedTotal, errorMessage } = document;
-  const [selectedIndices, setSelectedIndices] = useState<Set<number>>(new Set());
-  const [copyFeedback, setCopyFeedback] = useState(false);
+const RETENTION_CODES = ['5952', '0561', '1062'];
+
+const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
+  const { fileName, status, result, calculatedTotal, errorMessage } = darfDoc;
+  
+  // States para a nova lógica
+  const [calcMode, setCalcMode] = useState<CalculationMode>('funcionarios');
+  const [irInputValue, setIrInputValue] = useState<string>('');
+  const [copyStage, setCopyStage] = useState<CopyStage>('idle');
+  const [feedbackMessage, setFeedbackMessage] = useState<string>('');
 
   const isSuccess = status === ProcessingStatus.SUCCESS;
   const isError = status === ProcessingStatus.ERROR;
@@ -26,51 +35,134 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
   const difference = isSuccess && result && calculatedTotal !== undefined
     ? Math.abs(result.headerTotal - calculatedTotal)
     : 0;
-  
-  // Allow a small tolerance for floating point math
   const isMatch = difference < 0.05;
 
-  // Selection Logic
-  const toggleSelection = (index: number) => {
-    const newSet = new Set(selectedIndices);
+  // Categorização dos Itens
+  const categorizedData = useMemo(() => {
+    if (!result) return { funcionarios: 0, individuais: 0, itemsFunc: [], itemsIndiv: [], itemsRet: [] };
+
+    let sumFunc = 0;
+    let sumIndiv = 0;
+    const itemsFuncIndices = new Set<number>();
+    const itemsIndivIndices = new Set<number>();
+    const itemsRetIndices = new Set<number>();
+
+    result.items.forEach((item, idx) => {
+      const desc = (item.description || '').toLowerCase();
+      const code = item.code.replace(/[^\d]/g, ''); // remove formatação se houver
+
+      if (RETENTION_CODES.includes(code)) {
+        // É código de retenção de nota fiscal (5952, 0561, 1062)
+        // Pela regra: deduzir do cálculo de funcionários, e exceção no cálculo de individuais.
+        // Ou seja, não entra na soma positiva de ninguém.
+        itemsRetIndices.add(idx);
+      } else if (desc.includes('individ')) {
+        // É Contribuinte Individual
+        sumIndiv += item.total;
+        itemsIndivIndices.add(idx);
+      } else {
+        // É Encargos de Funcionários (o resto)
+        sumFunc += item.total;
+        itemsFuncIndices.add(idx);
+      }
+    });
+
+    return { 
+      baseFuncionarios: sumFunc, 
+      baseIndividuais: sumIndiv,
+      itemsFuncIndices,
+      itemsIndivIndices,
+      itemsRetIndices
+    };
+  }, [result]);
+
+  // Valor numérico do Input de IR
+  const irValueNumber = useMemo(() => {
+    if (!irInputValue) return 0;
+    // Converte string "1.200,50" para number 1200.50
+    const cleanStr = irInputValue.replace(/\./g, '').replace(',', '.');
+    const num = parseFloat(cleanStr);
+    return isNaN(num) ? 0 : num;
+  }, [irInputValue]);
+
+  // Cálculo Final baseado no Modo
+  const finalValue = useMemo(() => {
+    if (calcMode === 'funcionarios') {
+      // Total Guia (sem retenções e individuais) - IR Digitado
+      // A baseFuncionarios já exclui retenções e individuais pela lógica do useMemo acima
+      return Math.max(0, categorizedData.baseFuncionarios - irValueNumber);
+    } else {
+      // Soma Individuais + IR Digitado
+      return categorizedData.baseIndividuais + irValueNumber;
+    }
+  }, [calcMode, categorizedData, irValueNumber]);
+
+  // Formatação do Input de Moeda
+  const handleIrChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    let value = e.target.value;
+    // Remove tudo que não é número
+    value = value.replace(/\D/g, '');
     
-    // Lógica simplificada: Seleciona apenas a linha clicada, não agrupa mais por código.
-    if (newSet.has(index)) {
-      newSet.delete(index);
-    } else {
-      newSet.add(index);
+    // Formatação visual enquanto digita (ex: 100 -> 1,00)
+    if (value) {
+      value = (parseInt(value) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     }
-
-    setSelectedIndices(newSet);
+    
+    setIrInputValue(value);
+    setCopyStage('idle'); // Reseta estado de cópia se mudar valor
   };
 
-  const toggleAll = () => {
-    if (!result) return;
-    if (selectedIndices.size === result.items.length) {
-      setSelectedIndices(new Set());
-    } else {
-      const allIndices = new Set(result.items.map((_, i) => i));
-      setSelectedIndices(allIndices);
-    }
+  const initiateCopy = () => {
+    setCopyStage('verifying');
+    setFeedbackMessage('');
   };
 
-  // Calculate Selected Total
-  const selectedTotal = useMemo(() => {
-    if (!result) return 0;
-    return result.items.reduce((acc, item, idx) => {
-      return selectedIndices.has(idx) ? acc + item.total : acc;
-    }, 0);
-  }, [result, selectedIndices]);
+  const handleConfirmCopy = async (hasIr: boolean) => {
+    if (hasIr) {
+      if (irValueNumber <= 0) {
+        setFeedbackMessage('Digite o valor do IR antes de copiar.');
+        // Foca no input
+        document.getElementById(`ir-input-${darfDoc.id}`)?.focus();
+        return;
+      }
+    } else {
+      // Usuário disse que NÃO tem IR. Se houver valor digitado, avisar ou limpar?
+      // Pela lógica de segurança, vamos zerar o input visualmente se ele disse que não tem, 
+      // ou apenas prosseguir assumindo que o cálculo atual (seja com 0 ou não) é o desejado.
+      // Vamos assumir que se ele disse "Não", ele quer copiar sem considerar IR, mas a lógica matemática
+      // depende do input. Vamos apenas copiar.
+      if (irValueNumber > 0) {
+         // Opcional: Alertar que existe valor digitado mas ele clicou em Não
+      }
+    }
 
-  const handleCopySelected = async () => {
-    const text = selectedTotal.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    // Executa Cópia
+    const textToCopy = finalValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     try {
-      await navigator.clipboard.writeText(text);
-      setCopyFeedback(true);
-      setTimeout(() => setCopyFeedback(false), 2000);
+      await navigator.clipboard.writeText(textToCopy);
+      setCopyStage('copied');
+      setTimeout(() => setCopyStage('idle'), 2500);
     } catch (err) {
-      console.error('Failed to copy: ', err);
+      console.error('Failed to copy', err);
     }
+  };
+
+  // Helper para verificar se a linha deve ser destacada
+  const getRowStyle = (idx: number) => {
+    const isFuncRow = categorizedData.itemsFuncIndices.has(idx);
+    const isIndivRow = categorizedData.itemsIndivIndices.has(idx);
+    const isRetRow = categorizedData.itemsRetIndices.has(idx);
+
+    if (calcMode === 'funcionarios') {
+      if (isFuncRow) return 'bg-blue-50 text-blue-900 font-medium';
+      if (isRetRow) return 'opacity-50 bg-red-50 text-red-800 decoration-line-through'; // Excluído
+      if (isIndivRow) return 'opacity-40'; // Irrelevante
+    } else {
+      if (isIndivRow) return 'bg-green-50 text-green-900 font-medium';
+      if (isRetRow) return 'opacity-40'; // Irrelevante
+      if (isFuncRow) return 'opacity-40'; // Irrelevante
+    }
+    return 'text-slate-600';
   };
 
   return (
@@ -125,59 +217,121 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
         {isSuccess && result && (
           <div className="space-y-6">
             
-            {/* Comparison Banner */}
-            <div className={`p-4 rounded-lg flex items-center justify-between ${isMatch ? 'bg-green-50 border border-green-200' : 'bg-orange-50 border border-orange-200'}`}>
-              <div>
-                <p className={`text-sm font-medium ${isMatch ? 'text-green-800' : 'text-orange-800'}`}>
-                  {isMatch ? 'Os valores coincidem perfeitamente.' : 'Atenção: Divergência identificada.'}
-                </p>
-                {!isMatch && (
-                   <p className="text-xs text-orange-600 mt-1">
-                     Documento diz {formatCurrency(result.headerTotal)}, mas a soma é {formatCurrency(calculatedTotal || 0)}. Diferença: {formatCurrency(difference)}.
-                   </p>
-                )}
+            {/* Painel de Controle e Cálculo */}
+            <div className="bg-slate-50 rounded-xl border border-slate-200 p-5">
+              
+              {/* 1. Chave Seletora */}
+              <div className="flex p-1 bg-slate-200 rounded-lg mb-6">
+                <button
+                  onClick={() => { setCalcMode('funcionarios'); setCopyStage('idle'); }}
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all duration-200 ${
+                    calcMode === 'funcionarios' 
+                      ? 'bg-white text-blue-700 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Encargos de Funcionários
+                </button>
+                <button
+                  onClick={() => { setCalcMode('individuais'); setCopyStage('idle'); }}
+                  className={`flex-1 py-2 px-4 rounded-md text-sm font-semibold transition-all duration-200 ${
+                    calcMode === 'individuais' 
+                      ? 'bg-white text-green-700 shadow-sm' 
+                      : 'text-slate-500 hover:text-slate-700'
+                  }`}
+                >
+                  Contribuintes Individuais
+                </button>
               </div>
-              <div className="text-right">
-                 <div className="text-xs text-slate-500 uppercase tracking-wider font-semibold">Total Calculado</div>
-                 <div className={`text-xl font-bold ${isMatch ? 'text-green-700' : 'text-orange-700'}`}>
-                   {formatCurrency(calculatedTotal || 0)}
-                 </div>
-              </div>
-            </div>
 
-            {/* Selection Action Bar */}
-            <div className="flex items-center justify-between bg-indigo-50 p-3 rounded-md border border-indigo-100">
-               <div className="flex items-center gap-2">
-                 <span className="text-sm font-medium text-indigo-900">Soma Selecionada:</span>
-                 <span className="text-lg font-bold text-indigo-700">{formatCurrency(selectedTotal)}</span>
-               </div>
-               <button
-                 onClick={handleCopySelected}
-                 disabled={selectedTotal === 0}
-                 className={`
-                   flex items-center gap-2 px-4 py-2 rounded-md text-sm font-medium transition-all
-                   ${selectedTotal === 0 
-                     ? 'bg-indigo-200 text-indigo-400 cursor-not-allowed' 
-                     : 'bg-indigo-600 text-white hover:bg-indigo-700 shadow-sm active:transform active:scale-95'}
-                 `}
-               >
-                 {copyFeedback ? (
-                   <>
-                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                       <path fillRule="evenodd" d="M16.704 4.153a.75.75 0 01.143 1.052l-8 10.5a.75.75 0 01-1.127.075l-4.5-4.5a.75.75 0 011.06-1.06l3.894 3.893 7.48-9.817a.75.75 0 011.05-.143z" clipRule="evenodd" />
-                     </svg>
-                     Copiado!
-                   </>
-                 ) : (
-                   <>
-                     <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
-                       <path d="M7 3.5A1.5 1.5 0 018.5 2h3.879a1.5 1.5 0 011.06.44l3.122 3.12A1.5 1.5 0 0118 6.621V16.5a1.5 1.5 0 01-1.5 1.5h-9A1.5 1.5 0 016 16.5v-13z" />
-                       <path fillRule="evenodd" d="M4.25 5a.75.75 0 00-.75.75v12.5c0 .414.336.75.75.75h9.5a.75.75 0 00.75-.75v-1.25a.75.75 0 00-1.5 0v.5h-8V6.5h.5a.75.75 0 000-1.5h-1.25z" clipRule="evenodd" />
-                     </svg>
-                     Copiar Total
-                   </>
-                 )}
-               </button>
+              <div className="flex flex-col md:flex-row gap-6 items-start md:items-center justify-between">
+                
+                {/* 2. Campo IR */}
+                <div className="w-full md:w-1/3">
+                  <label htmlFor={`ir-input-${darfDoc.id}`} className="block text-xs font-semibold text-slate-500 uppercase tracking-wider mb-1">
+                    IR Contribuinte Individual (R$)
+                  </label>
+                  <div className="relative">
+                    <input
+                      id={`ir-input-${darfDoc.id}`}
+                      type="text"
+                      value={irInputValue}
+                      onChange={handleIrChange}
+                      placeholder="0,00"
+                      className="w-full pl-3 pr-3 py-2.5 border border-slate-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500 text-slate-900 font-mono font-medium"
+                    />
+                    {irValueNumber > 0 && (
+                      <div className="absolute right-0 top-full mt-1 text-[10px] text-slate-400">
+                        {calcMode === 'funcionarios' ? 'Será deduzido (-)' : 'Será somado (+)'}
+                      </div>
+                    )}
+                  </div>
+                </div>
+
+                {/* 3. Valor Total e Ação */}
+                <div className="flex flex-col items-end w-full md:w-2/3">
+                   <div className="mb-1 text-xs text-slate-500 uppercase font-semibold">
+                     {calcMode === 'funcionarios' ? 'Total Funcionários' : 'Total Individuais'}
+                   </div>
+                   <div className={`text-3xl font-bold mb-3 ${calcMode === 'funcionarios' ? 'text-blue-700' : 'text-green-700'}`}>
+                     {formatCurrency(finalValue)}
+                   </div>
+
+                   {/* Área de Ação: Botão Copiar ou Verificação */}
+                   <div className="w-full flex flex-col items-end">
+                     
+                     {copyStage === 'idle' && (
+                       <button
+                         onClick={initiateCopy}
+                         className={`
+                           flex items-center justify-center gap-2 w-full md:w-auto px-6 py-2.5 rounded-lg text-sm font-bold transition-all text-white shadow-sm active:scale-95
+                           ${calcMode === 'funcionarios' ? 'bg-blue-600 hover:bg-blue-700' : 'bg-green-600 hover:bg-green-700'}
+                         `}
+                       >
+                         <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" className="w-4 h-4">
+                           <path d="M8 3a1 1 0 011-1h2a1 1 0 110 2H9a1 1 0 01-1-1z" />
+                           <path d="M6 3a2 2 0 00-2 2v11a2 2 0 002 2h8a2 2 0 002-2V5a2 2 0 00-2-2 3 3 0 01-3 3H9a3 3 0 01-3-3z" />
+                         </svg>
+                         Copiar Valor
+                       </button>
+                     )}
+
+                     {copyStage === 'verifying' && (
+                       <div className="flex flex-col items-end animate-in fade-in zoom-in duration-200">
+                         <div className="text-sm font-semibold text-slate-700 mb-2 text-right">
+                           Existe algum valor para <br/> IR Contribuinte Individual?
+                         </div>
+                         <div className="flex gap-2">
+                           <button
+                             onClick={() => handleConfirmCopy(false)}
+                             className="px-4 py-1.5 bg-slate-200 hover:bg-slate-300 text-slate-700 rounded-md text-xs font-bold transition-colors"
+                           >
+                             NÃO
+                           </button>
+                           <button
+                             onClick={() => handleConfirmCopy(true)}
+                             className="px-4 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-md text-xs font-bold transition-colors"
+                           >
+                             SIM
+                           </button>
+                         </div>
+                         {feedbackMessage && (
+                           <span className="text-xs text-red-600 mt-1 font-medium">{feedbackMessage}</span>
+                         )}
+                       </div>
+                     )}
+
+                     {copyStage === 'copied' && (
+                       <div className="flex items-center gap-2 px-6 py-2.5 bg-green-100 text-green-800 rounded-lg text-sm font-bold animate-in fade-in">
+                         <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" className="w-5 h-5">
+                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clipRule="evenodd" />
+                         </svg>
+                         Valor Copiado!
+                       </div>
+                     )}
+                   </div>
+                </div>
+              </div>
             </div>
 
             {/* Data Table */}
@@ -185,15 +339,6 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50">
                   <tr>
-                    <th scope="col" className="px-4 py-3 w-10 text-center">
-                       <input 
-                          type="checkbox" 
-                          className="w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                          checked={result.items.length > 0 && selectedIndices.size === result.items.length}
-                          onChange={toggleAll}
-                          disabled={result.items.length === 0}
-                       />
-                    </th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider">Código</th>
                     <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-slate-500 uppercase tracking-wider w-full">Descrição</th>
                     <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-slate-500 uppercase tracking-wider whitespace-nowrap">Principal</th>
@@ -205,49 +350,35 @@ const DarfCard: React.FC<DarfCardProps> = ({ document }) => {
                 <tbody className="bg-white divide-y divide-slate-200">
                   {result.items.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-4 text-center text-sm text-slate-500">
+                      <td colSpan={6} className="px-4 py-4 text-center text-sm text-slate-500">
                         Nenhum código numérico identificado na composição.
                       </td>
                     </tr>
                   ) : (
                     result.items.map((item, idx) => (
-                      <tr key={`${item.code}-${idx}`} className={selectedIndices.has(idx) ? 'bg-indigo-50/40' : 'hover:bg-slate-50'}>
-                        <td className="px-4 py-2 text-center">
-                          <input 
-                            type="checkbox" 
-                            className="w-6 h-6 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500 cursor-pointer"
-                            checked={selectedIndices.has(idx)}
-                            onChange={() => toggleSelection(idx)}
-                          />
-                        </td>
+                      <tr key={`${item.code}-${idx}`} className={`transition-colors duration-200 ${getRowStyle(idx)}`}>
                         {/* Código com text-sm */}
-                        <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-slate-800">{item.code}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm font-bold text-inherit">{item.code}</td>
                         
-                        {/* Descrição com text-xs (12px), antes era text-[11px] */}
-                        <td className="px-4 py-2 text-xs leading-tight text-slate-600 max-w-2xl whitespace-pre-line">
+                        {/* Descrição com text-xs (12px) */}
+                        <td className="px-4 py-2 text-xs leading-tight text-inherit max-w-2xl whitespace-pre-line">
                              {item.description || '-'}
                         </td>
 
                         {/* Valores com text-sm */}
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.principal)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.multa)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-600 text-right font-mono">{formatCurrency(item.juros)}</td>
-                        <td className="px-4 py-2 whitespace-nowrap text-sm text-slate-900 text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.principal)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.multa)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono">{formatCurrency(item.juros)}</td>
+                        <td className="px-4 py-2 whitespace-nowrap text-sm text-inherit text-right font-mono font-semibold">{formatCurrency(item.total)}</td>
                       </tr>
                     ))
                   )}
                 </tbody>
                 <tfoot className="bg-slate-100">
                     <tr>
-                      <td colSpan={6} className="px-4 py-2 text-xs font-bold text-slate-700 uppercase text-right">Soma Geral</td>
+                      <td colSpan={5} className="px-4 py-2 text-xs font-bold text-slate-700 uppercase text-right">Soma Geral Guia</td>
                       <td className="px-4 py-2 text-sm font-bold text-slate-900 text-right font-mono">
                         {formatCurrency(calculatedTotal || 0)}
-                      </td>
-                    </tr>
-                    <tr>
-                      <td colSpan={6} className="px-4 py-2 text-xs font-bold text-slate-500 uppercase border-t border-slate-200 text-right">Doc. Total</td>
-                      <td className="px-4 py-2 text-sm font-bold text-slate-600 text-right font-mono border-t border-slate-200">
-                         {formatCurrency(result.headerTotal)}
                       </td>
                     </tr>
                 </tfoot>
