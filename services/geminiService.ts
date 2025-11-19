@@ -28,7 +28,7 @@ const fileToGenerativePart = async (file: File): Promise<{ inlineData: { data: s
 };
 
 /**
- * Analyzes a DARF document using Gemini 2.5 Flash.
+ * Analyzes a DARF document using Gemini 2.5 Flash with retry logic.
  */
 export const analyzeDarfDocument = async (file: File): Promise<DarfResult> => {
   const modelName = "gemini-2.5-flash";
@@ -52,54 +52,82 @@ export const analyzeDarfDocument = async (file: File): Promise<DarfResult> => {
     - Converta todos os valores monetários para o formato numérico (float/number), substituindo vírgula decimal por ponto e removendo separadores de milhar. Exemplo: "1.200,50" vira 1200.50.
   `;
 
-  const response = await ai.models.generateContent({
-    model: modelName,
-    contents: {
-      parts: [
-        filePart,
-        { text: prompt }
-      ]
-    },
-    config: {
-      responseMimeType: "application/json",
-      responseSchema: {
-        type: Type.OBJECT,
-        properties: {
-          headerTotal: {
-            type: Type.NUMBER,
-            description: "O valor total declarado no documento (campo Valor Total).",
-          },
-          items: {
-            type: Type.ARRAY,
-            description: "Lista de itens encontrados.",
-            items: {
-              type: Type.OBJECT,
-              properties: {
-                code: { type: Type.STRING, description: "O código da receita (ex: 1082)." },
-                description: { type: Type.STRING, description: "Descrição completa: Denominação principal + Detalhe da linha abaixo." },
-                principal: { type: Type.NUMBER, description: "Valor do principal." },
-                multa: { type: Type.NUMBER, description: "Valor da multa." },
-                juros: { type: Type.NUMBER, description: "Valor dos juros." },
-                total: { type: Type.NUMBER, description: "Valor total desta linha (soma de principal, multa, juros)." }
-              },
-              required: ["code", "principal", "multa", "juros", "total"]
-            }
-          }
+  const maxRetries = 3;
+  let attempt = 0;
+
+  while (attempt < maxRetries) {
+    try {
+      const response = await ai.models.generateContent({
+        model: modelName,
+        contents: {
+          parts: [
+            filePart,
+            { text: prompt }
+          ]
         },
-        required: ["headerTotal", "items"]
+        config: {
+          responseMimeType: "application/json",
+          responseSchema: {
+            type: Type.OBJECT,
+            properties: {
+              headerTotal: {
+                type: Type.NUMBER,
+                description: "O valor total declarado no documento (campo Valor Total).",
+              },
+              items: {
+                type: Type.ARRAY,
+                description: "Lista de itens encontrados.",
+                items: {
+                  type: Type.OBJECT,
+                  properties: {
+                    code: { type: Type.STRING, description: "O código da receita (ex: 1082)." },
+                    description: { type: Type.STRING, description: "Descrição completa: Denominação principal + Detalhe da linha abaixo." },
+                    principal: { type: Type.NUMBER, description: "Valor do principal." },
+                    multa: { type: Type.NUMBER, description: "Valor da multa." },
+                    juros: { type: Type.NUMBER, description: "Valor dos juros." },
+                    total: { type: Type.NUMBER, description: "Valor total desta linha (soma de principal, multa, juros)." }
+                  },
+                  required: ["code", "principal", "multa", "juros", "total"]
+                }
+              }
+            },
+            required: ["headerTotal", "items"]
+          }
+        }
+      });
+
+      if (!response.text) {
+        throw new Error("Falha ao analisar o documento: Resposta vazia da IA.");
       }
+
+      const data = JSON.parse(response.text) as DarfResult;
+      return data;
+
+    } catch (error: any) {
+      attempt++;
+      
+      // Verifica se é um erro de sobrecarga (503) ou similar
+      const isOverloaded = error?.status === 503 || 
+                           error?.code === 503 || 
+                           (error?.message && error.message.includes('overloaded'));
+
+      if (isOverloaded && attempt < maxRetries) {
+        console.warn(`Modelo sobrecarregado. Tentativa ${attempt} de ${maxRetries}. Aguardando...`);
+        // Espera 2 segundos (2000ms) antes de tentar de novo
+        await new Promise(resolve => setTimeout(resolve, 2000));
+        continue;
+      }
+
+      // Se não for erro de sobrecarga ou acabaram as tentativas, lança o erro original
+      console.error("Erro na API Gemini:", error);
+      
+      if (isOverloaded) {
+         throw new Error("O sistema da IA está temporariamente sobrecarregado. Por favor, aguarde alguns instantes e tente novamente.");
+      }
+      
+      throw new Error("Falha ao interpretar o documento. Verifique se o arquivo está legível.");
     }
-  });
-
-  if (!response.text) {
-    throw new Error("Falha ao analisar o documento: Resposta vazia da IA.");
   }
 
-  try {
-    const data = JSON.parse(response.text) as DarfResult;
-    return data;
-  } catch (e) {
-    console.error("JSON Parse Error:", e);
-    throw new Error("Falha ao interpretar a resposta da IA.");
-  }
+  throw new Error("Falha desconhecida após tentativas.");
 };
