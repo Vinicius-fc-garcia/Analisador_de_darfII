@@ -15,7 +15,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const RETENTION_CODES = ['5952', '0561', '1162'];
+const RETENTION_CODES = ['5952', '1708', '1162'];
 
 const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   const { fileName, status, result, calculatedTotal, errorMessage } = darfDoc;
@@ -381,14 +381,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                             )}
                           </td>
 
-                          <td className="px-4 py-3 whitespace-nowrap text-base font-bold text-inherit">{item.code}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-inherit">{item.code}</td>
                           <td className="px-4 py-3 text-xs leading-snug text-inherit whitespace-pre-line">
                               {item.description || '-'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.principal)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.multa)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.juros)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-bold">{formatCurrency(item.total)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.principal)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.multa)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.juros)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right font-bold">{formatCurrency(item.total)}</td>
                         </tr>
                       );
                     })
