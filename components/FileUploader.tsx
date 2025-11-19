@@ -39,26 +39,17 @@ const FileUploader: React.FC<FileUploadProps> = ({ onFilesSelected, disabled }) 
     e.target.value = '';
   }, [onFilesSelected]);
 
-  // Styles
-  const containerStyle: React.CSSProperties = {
-    borderWidth: '2px',
-    borderStyle: 'dashed',
-    borderColor: isDragging ? '#2563eb' : '#d1d5db', // blue-600 : gray-300
-    backgroundColor: isDragging ? '#eff6ff' : '#f9fafb', // blue-50 : gray-50
-    borderRadius: '0.5rem',
-    padding: '3rem',
-    textAlign: 'center',
-    width: '100%',
-    position: 'relative',
-    transition: 'all 0.2s ease',
-    cursor: disabled ? 'not-allowed' : 'pointer',
-    opacity: disabled ? 0.6 : 1
-  };
-
   return (
     <div
-      className="group"
-      style={containerStyle}
+      className={`
+        relative w-full group
+        border-2 border-dashed rounded-xl p-12 text-center transition-all duration-200 ease-in-out
+        ${disabled ? 'opacity-60 cursor-not-allowed' : 'cursor-pointer'}
+        ${isDragging 
+          ? 'border-blue-500 bg-blue-50/50' 
+          : 'border-slate-300 hover:border-blue-400 hover:bg-slate-50'
+        }
+      `}
       onDragOver={handleDragOver}
       onDragLeave={handleDragLeave}
       onDrop={handleDrop}
@@ -72,36 +63,27 @@ const FileUploader: React.FC<FileUploadProps> = ({ onFilesSelected, disabled }) 
         className="absolute inset-0 w-full h-full opacity-0 z-10 cursor-pointer disabled:cursor-not-allowed"
       />
       
-      <div className="pointer-events-none">
-        <svg 
-          className={`mx-auto h-12 w-12 mb-4 ${isDragging ? 'text-blue-600' : 'text-gray-400'}`}
-          stroke="currentColor" 
-          fill="none" 
-          viewBox="0 0 48 48" 
-          aria-hidden="true"
-        >
-          <path 
-            strokeLinecap="round" 
-            strokeLinejoin="round" 
-            strokeWidth={2} 
-            d="M28 8H12a4 4 0 00-4 4v20m32-12v8m0 0v8a4 4 0 01-4 4H12a4 4 0 01-4-4v-4m32-4l-3.172-3.172a4 4 0 00-5.656 0L28 28M8 32l9.172-9.172a4 4 0 015.656 0L28 28m0 0l4 4m4-24h8m-4-4v8m-12 4h.02" 
-          />
-        </svg>
-        
-        <div className="flex text-sm text-gray-600 justify-center">
-          <span className="relative rounded-md font-medium text-blue-600 hover:text-blue-500 focus-within:outline-none focus-within:ring-2 focus-within:ring-offset-2 focus-within:ring-blue-500">
-            <span className="px-3 py-2 bg-white border border-gray-300 rounded hover:bg-gray-50 shadow-sm">
-              Escolher Ficheiros
-            </span>
-          </span>
-          <p className="pl-2 self-center">Nenhum ficheiro selecionado</p>
+      <div className="pointer-events-none flex flex-col items-center justify-center">
+        {/* Ícone Nuvem/Upload Moderno */}
+        <div className={`
+          mb-4 p-4 rounded-full transition-colors duration-200
+          ${isDragging ? 'bg-blue-100 text-blue-600' : 'bg-slate-100 text-slate-400 group-hover:text-blue-500 group-hover:bg-blue-50'}
+        `}>
+          <svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4" />
+            <polyline points="17 8 12 3 7 8" />
+            <line x1="12" y1="3" x2="12" y2="15" />
+          </svg>
         </div>
-        <p className="text-xs text-gray-500 mt-2">
-          Arraste DARFs ou clique para selecionar
-        </p>
-        <p className="text-xs text-gray-400 mt-1">
-          Suporta múltiplos arquivos (PDF, JPG, PNG)
-        </p>
+        
+        <div className="space-y-1">
+          <p className="text-base font-semibold text-slate-700">
+            <span className="text-blue-600 hover:underline">Clique para selecionar</span> ou arraste o arquivo
+          </p>
+          <p className="text-sm text-slate-500">
+            PDF, JPG ou PNG
+          </p>
+        </div>
       </div>
     </div>
   );
