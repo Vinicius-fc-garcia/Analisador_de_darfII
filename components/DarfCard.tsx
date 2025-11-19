@@ -149,11 +149,11 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
 
     if (calcMode === 'funcionarios') {
       if (isFuncRow) return 'bg-blue-50/50 text-blue-900 font-medium';
-      if (isRetRow) return 'text-red-900'; // Opacidade removida
+      if (isRetRow) return 'text-red-900'; 
       if (isIndivRow) return 'text-slate-400 bg-slate-50/30'; 
     } else {
       if (isIndivRow) return 'bg-green-50/50 text-green-900 font-medium';
-      if (isRetRow) return 'text-red-900'; // Opacidade removida
+      if (isRetRow) return 'text-red-900';
       if (isFuncRow) return 'text-slate-400 bg-slate-50/30'; 
     }
     return 'text-slate-700';
@@ -169,7 +169,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
               <path fillRule="evenodd" d="M4.5 2A1.5 1.5 0 003 3.5v13A1.5 1.5 0 004.5 18h11a1.5 1.5 0 001.5-1.5V7.621a1.5 1.5 0 00-.44-1.06l-4.12-4.122A1.5 1.5 0 0011.378 2H4.5zm2.25 8.5a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5zm0 3a.75.75 0 000 1.5h6.5a.75.75 0 000-1.5h-6.5z" clipRule="evenodd" />
             </svg>
           </div>
-          <h3 className="font-semibold text-slate-900 truncate max-w-[200px] sm:max-w-md text-base" title={fileName}>
+          <h3 className="font-semibold text-slate-900 truncate max-w-[200px] sm:max-w-md text-lg" title={fileName}>
             {fileName}
           </h3>
         </div>
@@ -255,7 +255,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                       value={irInputValue}
                       onChange={handleIrChange}
                       placeholder="0,00"
-                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 font-mono font-semibold shadow-sm transition-all"
+                      className="w-full pl-10 pr-4 py-3 border border-slate-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-slate-900 font-mono font-semibold shadow-sm transition-all text-base"
                     />
                     {irValueNumber > 0 && (
                       <div className={`absolute right-3 top-3.5 text-[10px] font-bold uppercase px-1.5 py-0.5 rounded ${calcMode === 'funcionarios' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
@@ -270,7 +270,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                    <div className="mb-1 text-xs text-slate-400 uppercase font-bold tracking-wide">
                      {calcMode === 'funcionarios' ? 'Total a Pagar (Funcionários)' : 'Total a Pagar (Individuais)'}
                    </div>
-                   <div className={`text-4xl font-bold mb-5 tracking-tight ${calcMode === 'funcionarios' ? 'text-blue-700' : 'text-emerald-700'}`}>
+                   <div className={`text-5xl font-bold mb-5 tracking-tight ${calcMode === 'funcionarios' ? 'text-blue-700' : 'text-emerald-700'}`}>
                      {formatCurrency(finalValue)}
                    </div>
 
@@ -336,19 +336,19 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
               <table className="min-w-full divide-y divide-slate-200">
                 <thead className="bg-slate-50/80">
                   <tr>
-                    <th scope="col" className="px-3 py-3 w-16"></th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-bold text-slate-600 uppercase tracking-wider">Código</th>
-                    <th scope="col" className="px-4 py-3 text-left text-sm font-bold text-slate-600 uppercase tracking-wider w-full">Descrição</th>
-                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Principal</th>
-                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Multa</th>
-                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Juros</th>
-                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Total</th>
+                    <th scope="col" className="px-3 py-4 w-16"></th>
+                    <th scope="col" className="px-4 py-4 text-left text-sm font-bold text-slate-600 uppercase tracking-wider">Código</th>
+                    <th scope="col" className="px-4 py-4 text-left text-sm font-bold text-slate-600 uppercase tracking-wider w-full">Descrição</th>
+                    <th scope="col" className="px-4 py-4 text-right text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Principal</th>
+                    <th scope="col" className="px-4 py-4 text-right text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Multa</th>
+                    <th scope="col" className="px-4 py-4 text-right text-sm font-bold text-slate-600 uppercase tracking-wider whitespace-nowrap">Juros</th>
+                    <th scope="col" className="px-4 py-4 text-right text-sm font-bold text-slate-800 uppercase tracking-wider whitespace-nowrap">Total</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-slate-100">
                   {result.items.length === 0 ? (
                     <tr>
-                      <td colSpan={7} className="px-4 py-8 text-center text-base text-slate-500 italic">
+                      <td colSpan={7} className="px-4 py-8 text-center text-lg text-slate-500 italic">
                         Nenhum dado encontrado.
                       </td>
                     </tr>
@@ -367,11 +367,11 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                                 className="w-9 h-9 flex items-center justify-center rounded-lg bg-blue-700 text-white shadow-md hover:bg-blue-800 hover:shadow-lg transition-all active:scale-95"
                               >
                                 {copiedRowIndex === idx ? (
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" className="text-green-300">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 20 20" fill="currentColor" className="text-green-300">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
                                 ) : (
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                   </svg>
@@ -380,14 +380,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                             )}
                           </td>
 
-                          <td className="px-4 py-3 whitespace-nowrap text-base font-bold text-inherit font-mono">{item.code}</td>
-                          <td className="px-4 py-3 text-sm leading-snug text-inherit whitespace-pre-line">
+                          <td className="px-4 py-4 whitespace-nowrap text-base font-bold text-inherit font-mono">{item.code}</td>
+                          <td className="px-4 py-4 text-sm leading-snug text-inherit whitespace-pre-line">
                               {item.description || '-'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-mono opacity-90">{formatCurrency(item.principal)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-mono opacity-90">{formatCurrency(item.multa)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-mono opacity-90">{formatCurrency(item.juros)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-mono font-bold">{formatCurrency(item.total)}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-base text-inherit text-right font-mono opacity-90">{formatCurrency(item.principal)}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-base text-inherit text-right font-mono opacity-90">{formatCurrency(item.multa)}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-base text-inherit text-right font-mono opacity-90">{formatCurrency(item.juros)}</td>
+                          <td className="px-4 py-4 whitespace-nowrap text-base text-inherit text-right font-mono font-bold">{formatCurrency(item.total)}</td>
                         </tr>
                       );
                     })
