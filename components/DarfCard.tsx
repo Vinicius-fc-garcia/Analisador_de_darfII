@@ -15,7 +15,7 @@ const formatCurrency = (value: number) => {
   }).format(value);
 };
 
-const RETENTION_CODES = ['5952', '0561', '1062'];
+const RETENTION_CODES = ['5952', '0561', '1162'];
 
 const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   const { fileName, status, result, calculatedTotal, errorMessage } = darfDoc;
@@ -338,12 +338,12 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                 <thead className="bg-gray-50">
                   <tr>
                     <th scope="col" className="px-3 py-3 w-16"></th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider">Código</th>
-                    <th scope="col" className="px-4 py-3 text-left text-xs font-bold text-gray-500 uppercase tracking-wider w-full">Descrição</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Principal</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Multa</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Juros</th>
-                    <th scope="col" className="px-4 py-3 text-right text-xs font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Total</th>
+                    <th scope="col" className="px-4 py-3 text-left text-sm font-bold text-gray-500 uppercase tracking-wider">Código</th>
+                    <th scope="col" className="px-4 py-3 text-left text-sm font-bold text-gray-500 uppercase tracking-wider w-full">Descrição</th>
+                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Principal</th>
+                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Multa</th>
+                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-gray-500 uppercase tracking-wider whitespace-nowrap">Juros</th>
+                    <th scope="col" className="px-4 py-3 text-right text-sm font-bold text-gray-700 uppercase tracking-wider whitespace-nowrap">Total</th>
                   </tr>
                 </thead>
                 <tbody className="bg-white divide-y divide-gray-200">
@@ -365,14 +365,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                               <button
                                 onClick={() => handleCopyRowValue(item.total, idx)}
                                 title="Copiar valor da linha"
-                                className="w-8 h-8 flex items-center justify-center rounded bg-blue-600 text-white hover:bg-blue-700 transition-all active:scale-95"
+                                className="w-9 h-9 flex items-center justify-center bg-blue-700 text-white shadow-sm hover:bg-blue-800 transition-all active:scale-95"
                               >
                                 {copiedRowIndex === idx ? (
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 20 20" fill="currentColor" className="text-white">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 20 20" fill="currentColor" className="text-white">
                                     <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
                                   </svg>
                                 ) : (
-                                  <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                  <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                                     <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
                                     <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
                                   </svg>
@@ -381,14 +381,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                             )}
                           </td>
 
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-inherit">{item.code}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base font-bold text-inherit">{item.code}</td>
                           <td className="px-4 py-3 text-xs leading-snug text-inherit whitespace-pre-line">
                               {item.description || '-'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.principal)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.multa)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.juros)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right font-bold">{formatCurrency(item.total)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.principal)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.multa)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.juros)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-bold">{formatCurrency(item.total)}</td>
                         </tr>
                       );
                     })
@@ -397,7 +397,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                 <tfoot className="bg-gray-50 border-t border-gray-200">
                     <tr>
                       <td colSpan={6} className="px-4 py-4 text-xs font-bold text-gray-500 uppercase text-right tracking-wider">Soma Geral Guia</td>
-                      <td className="px-4 py-4 text-lg font-bold text-gray-900 text-right font-mono">
+                      <td className="px-4 py-4 text-xl font-bold text-gray-900 text-right font-mono">
                         {formatCurrency(calculatedTotal || 0)}
                       </td>
                     </tr>
