@@ -26,6 +26,8 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   const [copyStage, setCopyStage] = useState<CopyStage>('idle');
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
+  // Estado para o feedback do botão de cópia da diferença (0561)
+  const [diffCopySuccess, setDiffCopySuccess] = useState(false);
 
   const isSuccess = status === ProcessingStatus.SUCCESS;
   const isError = status === ProcessingStatus.ERROR;
@@ -40,6 +42,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     if (!result) return { 
       baseFuncionarios: 0, 
       baseIndividuais: 0, 
+      total0561: 0,
       itemsFuncIndices: new Set<number>(), 
       itemsIndivIndices: new Set<number>(), 
       itemsRetIndices: new Set<number>() 
@@ -47,6 +50,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
 
     let sumFunc = 0;
     let sumIndiv = 0;
+    let sum0561 = 0;
     const itemsFuncIndices = new Set<number>();
     const itemsIndivIndices = new Set<number>();
     const itemsRetIndices = new Set<number>();
@@ -54,6 +58,11 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     result.items.forEach((item, idx) => {
       const desc = (item.description || '').toLowerCase();
       const code = item.code.replace(/[^\d]/g, '');
+
+      // Captura específica do código 0561 para o cálculo de diferença
+      if (code === '0561') {
+        sum0561 += item.total;
+      }
 
       if (RETENTION_CODES.includes(code)) {
         itemsRetIndices.add(idx);
@@ -69,6 +78,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     return { 
       baseFuncionarios: sumFunc, 
       baseIndividuais: sumIndiv,
+      total0561: sum0561,
       itemsFuncIndices,
       itemsIndivIndices,
       itemsRetIndices
@@ -82,11 +92,19 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     return isNaN(num) ? 0 : num;
   }, [irInputValue]);
 
+  // Cálculo da diferença: Total do 0561 - Valor Digitado
+  const difference0561 = useMemo(() => {
+    return Math.max(0, categorizedData.total0561 - irValueNumber);
+  }, [categorizedData.total0561, irValueNumber]);
+
   const finalValue = useMemo(() => {
     if (calcMode === 'funcionarios') {
+      // Funcionários: Soma Total Func - Valor Digitado (Deduzir o IR individual do bolo geral)
       return Math.max(0, categorizedData.baseFuncionarios - irValueNumber);
     } else {
-      return categorizedData.baseIndividuais + irValueNumber;
+      // Individuais: Apenas a soma dos itens individuais. 
+      // O valor digitado NÃO é somado aqui, conforme solicitado.
+      return categorizedData.baseIndividuais;
     }
   }, [calcMode, categorizedData, irValueNumber]);
 
@@ -112,6 +130,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   };
 
   const initiateCopy = () => {
+    // Se já tiver valor digitado, pula a confirmação
     if (irValueNumber > 0) {
       performCopy();
     } else {
@@ -139,6 +158,17 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
       setTimeout(() => setCopiedRowIndex(null), 2000);
     } catch (err) {
       console.error('Failed to copy row', err);
+    }
+  };
+
+  const handleCopyDifference = async () => {
+    const textToCopy = difference0561.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    try {
+      await navigator.clipboard.writeText(textToCopy);
+      setDiffCopySuccess(true);
+      setTimeout(() => setDiffCopySuccess(false), 2000);
+    } catch (err) {
+      console.error('Failed to copy difference', err);
     }
   };
 
@@ -246,21 +276,56 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                   <label htmlFor={`ir-input-${darfDoc.id}`} className="block text-xs font-bold text-gray-500 uppercase mb-1">
                     IR Contribuinte Individual
                   </label>
-                  <div className="relative">
-                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                       <span className="text-gray-500 font-bold">R$</span>
+                  <div className="flex items-center gap-2">
+                    <div className="relative flex-1">
+                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                        <span className="text-gray-500 font-bold">R$</span>
+                      </div>
+                      <input
+                        id={`ir-input-${darfDoc.id}`}
+                        type="text"
+                        value={irInputValue}
+                        onChange={handleIrChange}
+                        placeholder="0,00"
+                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono font-bold"
+                      />
+                      {/* Label de Deduzir (Apenas Funcionários) */}
+                      {irValueNumber > 0 && calcMode === 'funcionarios' && (
+                        <div className="absolute right-2 top-2 text-[10px] font-bold uppercase px-1 rounded bg-red-100 text-red-700">
+                          Deduzir
+                        </div>
+                      )}
                     </div>
-                    <input
-                      id={`ir-input-${darfDoc.id}`}
-                      type="text"
-                      value={irInputValue}
-                      onChange={handleIrChange}
-                      placeholder="0,00"
-                      className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono font-bold"
-                    />
-                    {irValueNumber > 0 && (
-                      <div className={`absolute right-2 top-2 text-[10px] font-bold uppercase px-1 rounded ${calcMode === 'funcionarios' ? 'bg-red-100 text-red-700' : 'bg-green-100 text-green-700'}`}>
-                        {calcMode === 'funcionarios' ? 'Deduzir' : 'Somar'}
+
+                    {/* Botão de cópia da diferença (Somente em Individuais e se houver diferença) */}
+                    {calcMode === 'individuais' && difference0561 > 0 && (
+                      <div className="flex flex-col items-start">
+                        <button
+                          onClick={handleCopyDifference}
+                          title="Copiar diferença (0561 - Digitado)"
+                          className={`
+                            h-[42px] px-3 rounded font-bold text-white shadow-sm transition-all active:scale-95
+                            flex items-center gap-1 whitespace-nowrap text-xs
+                            ${diffCopySuccess ? 'bg-green-600' : 'bg-gray-600 hover:bg-gray-700'}
+                          `}
+                        >
+                          {diffCopySuccess ? (
+                            <>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
+                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                              </svg>
+                              Copiado
+                            </>
+                          ) : (
+                            <>
+                              <span>Dif: {formatCurrency(difference0561)}</span>
+                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                              </svg>
+                            </>
+                          )}
+                        </button>
                       </div>
                     )}
                   </div>
@@ -385,10 +450,10 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                           <td className="px-4 py-3 text-xs leading-snug text-inherit whitespace-pre-line">
                               {item.description || '-'}
                           </td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.principal)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.multa)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right">{formatCurrency(item.juros)}</td>
-                          <td className="px-4 py-3 whitespace-nowrap text-sm text-inherit text-right font-bold">{formatCurrency(item.total)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.principal)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.multa)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.juros)}</td>
+                          <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right font-bold">{formatCurrency(item.total)}</td>
                         </tr>
                       );
                     })
