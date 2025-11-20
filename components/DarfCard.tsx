@@ -26,8 +26,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
   const [copyStage, setCopyStage] = useState<CopyStage>('idle');
   const [feedbackMessage, setFeedbackMessage] = useState<string>('');
   const [copiedRowIndex, setCopiedRowIndex] = useState<number | null>(null);
-  // Estado para o feedback do botão de cópia da diferença (0561)
-  const [diffCopySuccess, setDiffCopySuccess] = useState(false);
+  const [irCopySuccess, setIrCopySuccess] = useState(false);
 
   const isSuccess = status === ProcessingStatus.SUCCESS;
   const isError = status === ProcessingStatus.ERROR;
@@ -59,7 +58,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
       const desc = (item.description || '').toLowerCase();
       const code = item.code.replace(/[^\d]/g, '');
 
-      // Captura específica do código 0561 para o cálculo de diferença
+      // Captura específica do código 0561 para o cálculo de diferença e limite
       if (code === '0561') {
         sum0561 += item.total;
       }
@@ -92,7 +91,7 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     return isNaN(num) ? 0 : num;
   }, [irInputValue]);
 
-  // Cálculo da diferença: Total do 0561 - Valor Digitado
+  // Cálculo da diferença: Total do 0561 - Valor Digitado (Mantido apenas para lógica interna se necessário, mas visual removido)
   const difference0561 = useMemo(() => {
     return Math.max(0, categorizedData.total0561 - irValueNumber);
   }, [categorizedData.total0561, irValueNumber]);
@@ -103,18 +102,32 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
       return Math.max(0, categorizedData.baseFuncionarios - irValueNumber);
     } else {
       // Individuais: Apenas a soma dos itens individuais. 
-      // O valor digitado NÃO é somado aqui, conforme solicitado.
       return categorizedData.baseIndividuais;
     }
   }, [calcMode, categorizedData, irValueNumber]);
 
   const handleIrChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    let value = e.target.value;
-    value = value.replace(/\D/g, '');
-    if (value) {
-      value = (parseInt(value) / 100).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    const rawDigits = e.target.value.replace(/\D/g, '');
+
+    if (!rawDigits) {
+      setIrInputValue('');
+      if (copyStage !== 'idle') setCopyStage('idle');
+      return;
     }
-    setIrInputValue(value);
+
+    // Converte para número real
+    let numericValue = parseInt(rawDigits) / 100;
+    const maxLimit = categorizedData.total0561;
+
+    // Limita o valor ao total do código 0561
+    if (numericValue > maxLimit) {
+      numericValue = maxLimit;
+    }
+
+    // Formata de volta para string brasileira
+    const formattedValue = numericValue.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+    
+    setIrInputValue(formattedValue);
     if (copyStage !== 'idle') setCopyStage('idle');
   };
 
@@ -161,14 +174,14 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
     }
   };
 
-  const handleCopyDifference = async () => {
-    const textToCopy = difference0561.toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const handleCopyIrValue = async () => {
+    if (!irInputValue) return;
     try {
-      await navigator.clipboard.writeText(textToCopy);
-      setDiffCopySuccess(true);
-      setTimeout(() => setDiffCopySuccess(false), 2000);
+      await navigator.clipboard.writeText(irInputValue);
+      setIrCopySuccess(true);
+      setTimeout(() => setIrCopySuccess(false), 2000);
     } catch (err) {
-      console.error('Failed to copy difference', err);
+      console.error('Failed to copy ir value', err);
     }
   };
 
@@ -276,57 +289,38 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                   <label htmlFor={`ir-input-${darfDoc.id}`} className="block text-xs font-bold text-gray-500 uppercase mb-1">
                     IR Contribuinte Individual
                   </label>
-                  <div className="flex items-center gap-2">
-                    <div className="relative flex-1">
-                      <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
-                        <span className="text-gray-500 font-bold">R$</span>
-                      </div>
-                      <input
-                        id={`ir-input-${darfDoc.id}`}
-                        type="text"
-                        value={irInputValue}
-                        onChange={handleIrChange}
-                        placeholder="0,00"
-                        className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono font-bold"
-                      />
-                      {/* Label de Deduzir (Apenas Funcionários) */}
-                      {irValueNumber > 0 && calcMode === 'funcionarios' && (
-                        <div className="absolute right-2 top-2 text-[10px] font-bold uppercase px-1 rounded bg-red-100 text-red-700">
-                          Deduzir
-                        </div>
-                      )}
+                  <div className="relative flex-1">
+                    <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
+                      <span className="text-gray-500 font-bold">R$</span>
                     </div>
-
-                    {/* Botão de cópia da diferença (Somente em Individuais e se houver diferença) */}
-                    {calcMode === 'individuais' && difference0561 > 0 && (
-                      <div className="flex flex-col items-start">
-                        <button
-                          onClick={handleCopyDifference}
-                          title="Copiar diferença (0561 - Digitado)"
-                          className={`
-                            h-[42px] px-3 rounded font-bold text-white shadow-sm transition-all active:scale-95
-                            flex items-center gap-1 whitespace-nowrap text-xs
-                            ${diffCopySuccess ? 'bg-green-600' : 'bg-gray-600 hover:bg-gray-700'}
-                          `}
-                        >
-                          {diffCopySuccess ? (
-                            <>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 20 20" fill="currentColor">
-                                <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
-                              </svg>
-                              Copiado
-                            </>
-                          ) : (
-                            <>
-                              <span>Dif: {formatCurrency(difference0561)}</span>
-                              <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                                <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
-                                <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
-                              </svg>
-                            </>
-                          )}
-                        </button>
-                      </div>
+                    <input
+                      id={`ir-input-${darfDoc.id}`}
+                      type="text"
+                      value={irInputValue}
+                      onChange={handleIrChange}
+                      placeholder={categorizedData.total0561 > 0 ? `Máx: ${formatCurrency(categorizedData.total0561)}` : '0,00'}
+                      title={categorizedData.total0561 > 0 ? `Valor limitado a ${formatCurrency(categorizedData.total0561)}` : 'Nenhum código 0561 encontrado'}
+                      className="w-full pl-10 pr-12 py-2 border border-gray-300 rounded focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-gray-900 font-mono font-bold disabled:bg-gray-100 disabled:text-gray-400"
+                    />
+                    
+                    {/* Botão copiar valor do input (Aparece se houver valor E estiver na aba individuais) */}
+                    {irInputValue && calcMode === 'individuais' && (
+                      <button
+                        onClick={handleCopyIrValue}
+                        title="Copiar valor"
+                        className="absolute right-2 top-1/2 -translate-y-1/2 p-1.5 rounded text-gray-400 hover:text-blue-600 hover:bg-blue-50 transition-colors"
+                      >
+                        {irCopySuccess ? (
+                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 20 20" fill="currentColor" className="text-green-600">
+                             <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                           </svg>
+                        ) : (
+                           <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                             <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+                             <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"></path>
+                           </svg>
+                        )}
+                      </button>
                     )}
                   </div>
                 </div>
@@ -446,8 +440,8 @@ const DarfCard: React.FC<DarfCardProps> = ({ document: darfDoc }) => {
                             )}
                           </td>
 
-                          <td className="px-4 py-3 whitespace-nowrap text-sm font-bold text-inherit">{item.code}</td>
-                          <td className="px-4 py-3 text-xs leading-snug text-inherit whitespace-pre-line">
+                          <td className="px-4 py-3 whitespace-nowrap text-base font-bold text-inherit">{item.code}</td>
+                          <td className="px-4 py-3 text-sm leading-snug text-inherit whitespace-pre-line">
                               {item.description || '-'}
                           </td>
                           <td className="px-4 py-3 whitespace-nowrap text-base text-inherit text-right">{formatCurrency(item.principal)}</td>
